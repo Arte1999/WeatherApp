@@ -2,7 +2,7 @@ import openmeteo_requests
 import requests_cache
 import pandas as pd
 from tenacity import retry, stop_after_attempt, wait_fixed  # Update here
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import plotly.express as px
 import plotly.io as pio
 
@@ -14,11 +14,11 @@ cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 
 # Function to fetch weather data
 @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))  # 5 retries with 2 seconds between each retry
-def get_weather_data():
+def get_weather_data(latitude, longitude):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
-        "latitude": 43.3182,
-        "longitude": 11.3306,
+        "latitude": latitude,
+        "longitude": longitude,
         "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", "precipitation", "rain", "cloud_cover", "surface_pressure", "wind_speed_10m"],
         "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability", "surface_pressure", "cloud_cover", "visibility", "wind_speed_10m"]
     }
@@ -57,37 +57,43 @@ def get_weather_data():
     return pd.DataFrame(data=hourly_data)
 
 # Route to display the weather data and graph
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    # Fetch the weather data
-    hourly_dataframe = get_weather_data()
+    plot_html = None
+    if request.method == 'POST':
+        # Get latitude and longitude from form input
+        latitude = float(request.form['latitude'])
+        longitude = float(request.form['longitude'])
 
-    # Create the Plotly graph
-    fig = px.line(
-        hourly_dataframe,
-        x='date',
-        y=['temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 
-           'precipitation_probability', 'surface_pressure', 'cloud_cover', 
-           'visibility', 'wind_speed_10m'],
-        title='Hourly Weather Data',
-        labels={
-            'temperature_2m': 'Temperature (°C)',
-            'relative_humidity_2m': 'Humidity (%)',
-            'apparent_temperature': 'Apparent Temperature (°C)',
-            'precipitation_probability': 'Precipitation Probability (%)',
-            'surface_pressure': 'Surface Pressure (hPa)',
-            'cloud_cover': 'Cloud Cover (%)',
-            'visibility': 'Visibility (km)',
-            'wind_speed_10m': 'Wind Speed (m/s)',
-            'date': 'Date and Time'
-        }
-    )
+        # Fetch the weather data
+        hourly_dataframe = get_weather_data(latitude, longitude)
 
-    # Convert Plotly figure to HTML
-    graph_html = pio.to_html(fig, full_html=False)
+        # Create the Plotly graph
+        fig = px.line(
+            hourly_dataframe,
+            x='date',
+            y=['temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 
+               'precipitation_probability', 'surface_pressure', 'cloud_cover', 
+               'visibility', 'wind_speed_10m'],
+            title='Hourly Weather Data',
+            labels={
+                'temperature_2m': 'Temperature (°C)',
+                'relative_humidity_2m': 'Humidity (%)',
+                'apparent_temperature': 'Apparent Temperature (°C)',
+                'precipitation_probability': 'Precipitation Probability (%)',
+                'surface_pressure': 'Surface Pressure (hPa)',
+                'cloud_cover': 'Cloud Cover (%)',
+                'visibility': 'Visibility (km)',
+                'wind_speed_10m': 'Wind Speed (m/s)',
+                'date': 'Date and Time'
+            }
+        )
+
+        # Convert Plotly figure to HTML
+        plot_html = pio.to_html(fig, full_html=False)
 
     # Return the rendered webpage with the graph
-    return render_template('index.html', plot_html=graph_html)  # Correct path
+    return render_template('index.html', plot_html=plot_html)  # Correct path
 
 
 if __name__ == '__main__':
