@@ -4,10 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather App</title>
+
+    <!-- Add some CSS for responsiveness -->
+    <style>
+        /* Make the plot container responsive */
+        .plot-container {
+            width: 100%;
+            max-width: 800px;
+            margin: auto;
+        }
+
+        @media (max-width: 600px) {
+            /* For small screens (mobile), show only the mobile-friendly plot */
+            .desktop-plot {
+                display: none;
+            }
+
+            .mobile-plot {
+                display: block;
+            }
+        }
+
+        @media (min-width: 601px) {
+            /* For larger screens, show the detailed plot */
+            .mobile-plot {
+                display: none;
+            }
+
+            .desktop-plot {
+                display: block;
+            }
+        }
+    </style>
 </head>
 <body>
 
-    <h1>Enter Coordinates to View Weather Data</h1>
+    <h1>Enter Coordinates to View Weather Data (Also works for french frogs)</h1>
     
     <!-- Form to input latitude and longitude -->
     <form action="/" method="POST">
@@ -20,10 +52,17 @@
         <button type="submit">Submit</button>
     </form>
 
-    <!-- Plotly graph will be displayed here -->
-    <div>
+    <!-- Container for the detailed plot (desktop version) -->
+    <div class="plot-container desktop-plot">
         {% if plot_html %}
             {{ plot_html | safe }}
+        {% endif %}
+    </div>
+
+    <!-- Container for the mobile-friendly plot -->
+    <div class="plot-container mobile-plot">
+        {% if plot_mobile_html %}
+            {{ plot_mobile_html | safe }}
         {% endif %}
     </div>
 
