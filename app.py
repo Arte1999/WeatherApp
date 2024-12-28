@@ -12,103 +12,77 @@ app = Flask(__name__)
 # Setup the Open-Meteo API client with cache
 cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 
-# Function to fetch weather data
+# Function to fetch weather data for different time periods
 @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))  # 5 retries with 2 seconds between each retry
-def get_weather_data(latitude, longitude):
+def get_weather_data(latitude, longitude, forecast_days=1):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": latitude,
         "longitude": longitude,
         "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", "precipitation", "rain", "cloud_cover", "surface_pressure", "wind_speed_10m"],
-        "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability", "surface_pressure", "cloud_cover", "visibility", "wind_speed_10m"]
+        "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability", "surface_pressure", "cloud_cover", "visibility", "wind_speed_10m"],
+        "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum", "precipitation_hours", "windspeed_10m_max"],
+        "forecast_days": forecast_days  # Control the forecast duration (1, 3, or 7 days)
     }
     openmeteo = openmeteo_requests.Client(session=cache_session)  # Correct client initialization
     responses = openmeteo.weather_api(url, params=params)
     response = responses[0]
 
-    # Process hourly data
-    hourly = response.Hourly()
-    hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
-    hourly_relative_humidity_2m = hourly.Variables(1).ValuesAsNumpy()
-    hourly_apparent_temperature = hourly.Variables(2).ValuesAsNumpy()
-    hourly_precipitation_probability = hourly.Variables(3).ValuesAsNumpy()
-    hourly_surface_pressure = hourly.Variables(4).ValuesAsNumpy()
-    hourly_cloud_cover = hourly.Variables(5).ValuesAsNumpy()
-    hourly_visibility = hourly.Variables(6).ValuesAsNumpy()
-    hourly_wind_speed_10m = hourly.Variables(7).ValuesAsNumpy()
+    if forecast_days == 1:
+        return response.Daily()  # Return 1-day forecast data
+    elif forecast_days == 3:
+        return response.Daily()  # Return 3-day forecast data
+    elif forecast_days == 7:
+        return response.Daily()  # Return 7-day forecast data
 
-    hourly_data = {
-        "date": pd.date_range(
-            start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
-            end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
-            freq=pd.Timedelta(seconds=hourly.Interval()),
-            inclusive="left"
-        )
-    }
-    hourly_data["temperature_2m"] = hourly_temperature_2m
-    hourly_data["relative_humidity_2m"] = hourly_relative_humidity_2m
-    hourly_data["apparent_temperature"] = hourly_apparent_temperature
-    hourly_data["precipitation_probability"] = hourly_precipitation_probability
-    hourly_data["surface_pressure"] = hourly_surface_pressure
-    hourly_data["cloud_cover"] = hourly_cloud_cover
-    hourly_data["visibility"] = hourly_visibility
-    hourly_data["wind_speed_10m"] = hourly_wind_speed_10m
-
-    return pd.DataFrame(data=hourly_data)
+# Function to create a plot for the forecast data
+def create_forecast_plot(forecast_data, title):
+    forecast_df = pd.DataFrame(forecast_data)
+    fig = px.line(
+        forecast_df,
+        x='date',
+        y=['temperature_2m_max', 'temperature_2m_min'],
+        title=title,
+        labels={
+            'temperature_2m_max': 'Max Temperature (°C)',
+            'temperature_2m_min': 'Min Temperature (°C)',
+            'date': 'Date'
+        }
+    )
+    return pio.to_html(fig, full_html=False)
 
 # Route to display the weather data and graph
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    plot_html = None
-    plot_mobile_html = None
+    plot_html_7_days = None
+    plot_html_3_days = None
+    plot_html_1_day = None
+
     if request.method == 'POST':
         # Get latitude and longitude from form input
         latitude = float(request.form['latitude'])
         longitude = float(request.form['longitude'])
 
-        # Fetch the weather data
-        hourly_dataframe = get_weather_data(latitude, longitude)
+        # Fetch weather data for 7 days, 3 days, and 1 day
+        forecast_7_days = get_weather_data(latitude, longitude, forecast_days=7)
+        forecast_3_days = get_weather_data(latitude, longitude, forecast_days=3)
+        forecast_1_day = get_weather_data(latitude, longitude, forecast_days=1)
 
-        # Create the detailed Plotly graph (existing one)
-        fig = px.line(
-            hourly_dataframe,
-            x='date',
-            y=['temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 
-               'precipitation_probability', 'surface_pressure', 'cloud_cover', 
-               'visibility', 'wind_speed_10m'],
-            title='Hourly Weather Data',
-            labels={
-                'temperature_2m': 'Temperature (°C)',
-                'relative_humidity_2m': 'Humidity (%)',
-                'apparent_temperature': 'Apparent Temperature (°C)',
-                'precipitation_probability': 'Precipitation Probability (%)',
-                'surface_pressure': 'Surface Pressure (hPa)',
-                'cloud_cover': 'Cloud Cover (%)',
-                'visibility': 'Visibility (km)',
-                'wind_speed_10m': 'Wind Speed (m/s)',
-                'date': 'Date and Time'
-            }
-        )
+        # Create the plots for each forecast duration
+        plot_html_7_days = create_forecast_plot(forecast_7_days, title='7-Day Weather Forecast')
+        plot_html_3_days = create_forecast_plot(forecast_3_days, title='3-Day Weather Forecast')
+        plot_html_1_day = create_forecast_plot(forecast_1_day, title='1-Day Weather Forecast')
 
-        # Create a simplified version for mobile (Temperature and Humidity only)
-        fig_mobile = px.line(
-            hourly_dataframe,
-            x='date',
-            y=['temperature_2m', 'relative_humidity_2m'],
-            title='Weather Data (Mobile View)',
-            labels={
-                'temperature_2m': 'Temperature (°C)',
-                'relative_humidity_2m': 'Humidity (%)',
-                'date': 'Date and Time'
-            }
-        )
+    # Return the rendered webpage with the graphs
+    return render_template('index.html', 
+                           plot_html_7_days=plot_html_7_days,
+                           plot_html_3_days=plot_html_3_days,
+                           plot_html_1_day=plot_html_1_day)
 
-        # Convert Plotly figures to HTML
-        plot_html = pio.to_html(fig, full_html=False)
-        plot_mobile_html = pio.to_html(fig_mobile, full_html=False)
 
-    # Return the rendered webpage with both graphs
-    return render_template('index.html', plot_html=plot_html, plot_mobile_html=plot_mobile_html)
+if __name__ == '__main__':
+    import os
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
 
 
 if __name__ == '__main__':
