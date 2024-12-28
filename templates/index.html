@@ -12,7 +12,6 @@
             width: 100%;
             max-width: 800px;
             margin: auto;
-            padding: 20px;
         }
 
         @media (max-width: 600px) {
@@ -53,24 +52,17 @@
         <button type="submit">Submit</button>
     </form>
 
-    <h2>7-Day Weather Forecast</h2>
-    <div class="plot-container">
-        {% if plot_html_7_days %}
-            {{ plot_html_7_days | safe }}
+    <!-- Container for the detailed plot (desktop version) -->
+    <div class="plot-container desktop-plot">
+        {% if plot_html %}
+            {{ plot_html | safe }}
         {% endif %}
     </div>
 
-    <h2>3-Day Weather Forecast</h2>
-    <div class="plot-container">
-        {% if plot_html_3_days %}
-            {{ plot_html_3_days | safe }}
-        {% endif %}
-    </div>
-
-    <h2>1-Day Weather Forecast</h2>
-    <div class="plot-container">
-        {% if plot_html_1_day %}
-            {{ plot_html_1_day | safe }}
+    <!-- Container for the mobile-friendly plot -->
+    <div class="plot-container mobile-plot">
+        {% if plot_mobile_html %}
+            {{ plot_mobile_html | safe }}
         {% endif %}
     </div>
 
