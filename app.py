@@ -1,7 +1,7 @@
 import openmeteo_requests
 import requests_cache
 import pandas as pd
-from tenacity import retry, stop_after_attempt, wait_fixed  # Update here
+from tenacity import retry, stop_after_attempt, wait_fixed
 from flask import Flask, render_template, request
 import plotly.express as px
 import plotly.io as pio
@@ -60,6 +60,7 @@ def get_weather_data(latitude, longitude):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     plot_html = None
+    plot_mobile_html = None
     if request.method == 'POST':
         # Get latitude and longitude from form input
         latitude = float(request.form['latitude'])
@@ -68,7 +69,7 @@ def index():
         # Fetch the weather data
         hourly_dataframe = get_weather_data(latitude, longitude)
 
-        # Create the Plotly graph
+        # Create the detailed Plotly graph (existing one)
         fig = px.line(
             hourly_dataframe,
             x='date',
@@ -89,11 +90,25 @@ def index():
             }
         )
 
-        # Convert Plotly figure to HTML
-        plot_html = pio.to_html(fig, full_html=False)
+        # Create a simplified version for mobile (Temperature and Humidity only)
+        fig_mobile = px.line(
+            hourly_dataframe,
+            x='date',
+            y=['temperature_2m', 'relative_humidity_2m'],
+            title='Weather Data (Mobile View)',
+            labels={
+                'temperature_2m': 'Temperature (°C)',
+                'relative_humidity_2m': 'Humidity (%)',
+                'date': 'Date and Time'
+            }
+        )
 
-    # Return the rendered webpage with the graph
-    return render_template('index.html', plot_html=plot_html)  # Correct path
+        # Convert Plotly figures to HTML
+        plot_html = pio.to_html(fig, full_html=False)
+        plot_mobile_html = pio.to_html(fig_mobile, full_html=False)
+
+    # Return the rendered webpage with both graphs
+    return render_template('index.html', plot_html=plot_html, plot_mobile_html=plot_mobile_html)
 
 
 if __name__ == '__main__':
