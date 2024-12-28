@@ -1,7 +1,7 @@
 import openmeteo_requests
 import requests_cache
 import pandas as pd
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_fixed  # Update here
 from flask import Flask, render_template, request
 import plotly.express as px
 import plotly.io as pio
@@ -60,7 +60,6 @@ def get_weather_data(latitude, longitude):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     plot_html = None
-    plot_mobile_html = None
     if request.method == 'POST':
         # Get latitude and longitude from form input
         latitude = float(request.form['latitude'])
@@ -69,7 +68,7 @@ def index():
         # Fetch the weather data
         hourly_dataframe = get_weather_data(latitude, longitude)
 
-        # Create the detailed Plotly graph (existing one)
+        # Create the Plotly graph
         fig = px.line(
             hourly_dataframe,
             x='date',
@@ -90,25 +89,11 @@ def index():
             }
         )
 
-        # Create a simplified version for mobile (Temperature and Humidity only)
-        fig_mobile = px.line(
-            hourly_dataframe,
-            x='date',
-            y=['temperature_2m', 'relative_humidity_2m'],
-            title='Weather Data (Mobile View)',
-            labels={
-                'temperature_2m': 'Temperature (°C)',
-                'relative_humidity_2m': 'Humidity (%)',
-                'date': 'Date and Time'
-            }
-        )
-
-        # Convert Plotly figures to HTML
+        # Convert Plotly figure to HTML
         plot_html = pio.to_html(fig, full_html=False)
-        plot_mobile_html = pio.to_html(fig_mobile, full_html=False)
 
-    # Return the rendered webpage with both graphs
-    return render_template('index.html', plot_html=plot_html, plot_mobile_html=plot_mobile_html)
+    # Return the rendered webpage with the graph
+    return render_template('index.html', plot_html=plot_html)  # Correct path
 
 
 if __name__ == '__main__':
