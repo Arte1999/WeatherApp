@@ -3,12 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Data</title>
+    <title>Weather App</title>
 </head>
 <body>
-    <h1>Hourly Weather Data by Andrea Bellini</h1>
+
+    <h1>Enter Coordinates to View Weather Data</h1>
+    
+    <!-- Form to input latitude and longitude -->
+    <form action="/" method="POST">
+        <label for="latitude">Latitude:</label>
+        <input type="text" id="latitude" name="latitude" required><br><br>
+
+        <label for="longitude">Longitude:</label>
+        <input type="text" id="longitude" name="longitude" required><br><br>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <!-- Plotly graph will be displayed here -->
     <div>
-        {{ plot_html | safe }}
+        {% if plot_html %}
+            {{ plot_html | safe }}
+        {% endif %}
     </div>
+
 </body>
 </html>
