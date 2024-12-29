@@ -1,16 +1,11 @@
 import openmeteo_requests
-import requests_cache
 import pandas as pd
 from flask import Flask, render_template, request
 import plotly.express as px
 import plotly.io as pio
-import os
 
 # Initialize Flask app
 app = Flask(__name__)
-
-# Setup caching for faster repeated requests
-cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 
 # Function to fetch weather data with optimized API call
 def get_weather_data(latitude, longitude):
@@ -23,7 +18,7 @@ def get_weather_data(latitude, longitude):
         "timezone": "auto"  # Automatically set timezone to prevent unnecessary timezone calculations
     }
 
-    openmeteo = openmeteo_requests.Client(session=cache_session)
+    openmeteo = openmeteo_requests.Client()
     
     try:
         # Call the API and get the data
@@ -91,5 +86,6 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
