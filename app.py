@@ -19,8 +19,8 @@ def get_weather_data(latitude, longitude):
     params = {
         "latitude": latitude,
         "longitude": longitude,
-        "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation", "cloud_cover", "surface_pressure", "wind_speed_10m"],
-        "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability", "surface_pressure", "cloud_cover", "visibility", "wind_speed_10m"]
+        "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability", "cloud_cover",  "wind_speed_10m"],
+        "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability", "cloud_cover", "wind_speed_10m"]
     }
     openmeteo = openmeteo_requests.Client(session=cache_session)  # Correct client initialization
     responses = openmeteo.weather_api(url, params=params)
