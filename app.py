@@ -1,7 +1,7 @@
 import openmeteo_requests
 import requests_cache
 import pandas as pd
-from tenacity import retry, stop_after_attempt, wait_fixed  # Update here
+from tenacity import retry, stop_after_attempt, wait_fixed
 from flask import Flask, render_template, request
 import plotly.express as px
 import plotly.io as pio
@@ -22,7 +22,7 @@ def get_weather_data(latitude, longitude):
         "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", "precipitation", "rain", "cloud_cover", "surface_pressure", "wind_speed_10m"],
         "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability", "surface_pressure", "cloud_cover", "visibility", "wind_speed_10m"]
     }
-    openmeteo = openmeteo_requests.Client(session=cache_session)  # Correct client initialization
+    openmeteo = openmeteo_requests.Client(session=cache_session)
     responses = openmeteo.weather_api(url, params=params)
     response = responses[0]
 
@@ -56,12 +56,10 @@ def get_weather_data(latitude, longitude):
 
     return pd.DataFrame(data=hourly_data)
 
-# Route to display the weather data and graph
-@app.route('/', methods=['GET', 'POST'])
-def index():
+# Vercel function entry point
+def handler(request):
     plot_html = None
     if request.method == 'POST':
-        # Get latitude and longitude from form input
         latitude = float(request.form['latitude'])
         longitude = float(request.form['longitude'])
 
@@ -93,9 +91,4 @@ def index():
         plot_html = pio.to_html(fig, full_html=False)
 
     # Return the rendered webpage with the graph
-    return render_template('index.html', plot_html=plot_html)  # Correct path
-
-
-if __name__ == '__main__':
-    import os
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    return render_template('index.html', plot_html=plot_html)
