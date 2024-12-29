@@ -5,15 +5,21 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from flask import Flask, render_template, request
 import plotly.express as px
 import plotly.io as pio
+import os
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Setup the Open-Meteo API client with cache
-cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
+# Check if the app is running on Vercel (serverless environment)
+if os.getenv('VERCEL') == '1':
+    # Disable caching on Vercel (serverless)
+    cache_session = None
+else:
+    # Use caching for local or other environments
+    cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 
 # Function to fetch weather data
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(2))  # 5 retries with 2 seconds between each retry
+@retry(stop=stop_after_attempt(5), wait=wait_fixed(2))  # Retry 5 times with 2 seconds between retries
 def get_weather_data(latitude, longitude):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
@@ -22,7 +28,7 @@ def get_weather_data(latitude, longitude):
         "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", "precipitation", "rain", "cloud_cover", "surface_pressure", "wind_speed_10m"],
         "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability", "surface_pressure", "cloud_cover", "visibility", "wind_speed_10m"]
     }
-    openmeteo = openmeteo_requests.Client(session=cache_session)
+    openmeteo = openmeteo_requests.Client(session=cache_session)  # Correct client initialization
     responses = openmeteo.weather_api(url, params=params)
     response = responses[0]
 
@@ -56,10 +62,12 @@ def get_weather_data(latitude, longitude):
 
     return pd.DataFrame(data=hourly_data)
 
-# Vercel function entry point
-def handler(request):
+# Route to display the weather data and graph
+@app.route('/', methods=['GET', 'POST'])
+def index():
     plot_html = None
     if request.method == 'POST':
+        # Get latitude and longitude from form input
         latitude = float(request.form['latitude'])
         longitude = float(request.form['longitude'])
 
@@ -91,4 +99,5 @@ def handler(request):
         plot_html = pio.to_html(fig, full_html=False)
 
     # Return the rendered webpage with the graph
-    return render_template('index.html', plot_html=plot_html)
+    return render_template('index.html', plot_html=plot_html)  # Correct path
+
