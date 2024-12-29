@@ -9,24 +9,28 @@ import os
 # Initialize Flask app
 app = Flask(__name__)
 
-# Setup the Open-Meteo API client with cache
+# Setup caching for faster repeated requests
 cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 
-# Function to fetch weather data
+# Function to fetch weather data with optimized API call
 def get_weather_data(latitude, longitude):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": latitude,
         "longitude": longitude,
         "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day"],
-        "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability"]
+        "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability"],
+        "timezone": "auto"  # Automatically set timezone to prevent unnecessary timezone calculations
     }
-    openmeteo = openmeteo_requests.Client(session=cache_session)  # Correct client initialization
+
+    openmeteo = openmeteo_requests.Client(session=cache_session)
+    
     try:
+        # Call the API and get the data
         responses = openmeteo.weather_api(url, params=params)
         response = responses[0]
-        
-        # Process hourly data (optimized for fewer variables)
+
+        # Process only the relevant parts (limit data processing to minimize delay)
         hourly = response.Hourly()
         hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
         hourly_relative_humidity_2m = hourly.Variables(1).ValuesAsNumpy()
@@ -47,6 +51,7 @@ def get_weather_data(latitude, longitude):
         }
 
         return pd.DataFrame(data=hourly_data)
+
     except Exception as e:
         print(f"Error fetching weather data: {e}")
         return None
@@ -56,7 +61,6 @@ def get_weather_data(latitude, longitude):
 def index():
     plot_html = None
     if request.method == 'POST':
-        # Get latitude and longitude from form input
         latitude = float(request.form['latitude'])
         longitude = float(request.form['longitude'])
 
