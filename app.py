@@ -13,6 +13,14 @@ app = Flask(__name__)
 # Setup the Open-Meteo API client with cache (expires after 1 hour)
 cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 
+from flask import send_from_directory
+import os
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico')
+
+
 # Function to fetch weather data
 @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
 def get_weather_data(latitude, longitude):
