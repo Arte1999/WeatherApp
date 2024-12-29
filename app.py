@@ -15,11 +15,12 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)  # Log everything (DEBUG level)
 
 # Check if the app is running on Vercel (serverless environment)
-if os.getenv('VERCEL') == '1':
-    # Disable caching on Vercel (serverless) by not initializing requests_cache
+is_vercel = os.getenv('VERCEL') == '1'
+
+# Disable caching if running in Vercel (serverless)
+if is_vercel:
     cache_session = None
 else:
-    # Use caching for local or other environments
     cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 
 # Function to fetch weather data
