@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 # Check if the app is running on Vercel (serverless environment)
 if os.getenv('VERCEL') == '1':
-    # Disable caching on Vercel (serverless)
+    # Disable caching on Vercel (serverless) by not initializing requests_cache
     cache_session = None
 else:
     # Use caching for local or other environments
@@ -28,7 +28,13 @@ def get_weather_data(latitude, longitude):
         "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", "precipitation", "rain", "cloud_cover", "surface_pressure", "wind_speed_10m"],
         "hourly": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation_probability", "surface_pressure", "cloud_cover", "visibility", "wind_speed_10m"]
     }
-    openmeteo = openmeteo_requests.Client(session=cache_session)  # Correct client initialization
+
+    # Only initialize the client if caching is enabled
+    if cache_session:
+        openmeteo = openmeteo_requests.Client(session=cache_session)  # Correct client initialization
+    else:
+        openmeteo = openmeteo_requests.Client()  # Initialize without cache
+
     responses = openmeteo.weather_api(url, params=params)
     response = responses[0]
 
